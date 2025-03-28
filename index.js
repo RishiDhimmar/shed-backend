@@ -5,7 +5,7 @@ const DxfParser = require('dxf-parser');
 const app = express();
 
 app.get('/api/dxf-entities', (req, res) => {
-    const filePath = 'Result.dxf'; // File in project root
+    const filePath = 'Result.dxf'; // Ensure this matches your file name
 
     try {
         const fileText = fs.readFileSync(filePath, 'utf-8');
@@ -17,10 +17,6 @@ app.get('/api/dxf-entities', (req, res) => {
         console.error('Error parsing DXF:', err);
         res.status(500).json({ error: 'Failed to parse DXF file' });
     }
-});
-
-app.get('/', (req, res) => {
-    res.send('Hello from the backend!');
 });
 
 const port = process.env.PORT || 3000;
