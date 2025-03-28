@@ -5,7 +5,7 @@ const DxfParser = require('dxf-parser');
 const app = express();
 
 app.get('/api/dxf-entities', (req, res) => {
-    const filePath = 'sample.dxf'; // Adjust to 'Result.dxf' if that’s your file
+    const filePath = 'Result.dxf'; // Adjust to 'Result.dxf' if that’s your file
 
     try {
         const fileText = fs.readFileSync(filePath, 'utf-8');
