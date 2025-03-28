@@ -5,22 +5,24 @@ const DxfParser = require('dxf-parser');
 const app = express();
 
 app.get('/api/dxf-entities', (req, res) => {
-    const filePath = 'Result.dxf'; // Ensure this matches your file name
+    const filePath = 'sample.dxf'; // Adjust to 'Result.dxf' if that’s your file
 
     try {
         const fileText = fs.readFileSync(filePath, 'utf-8');
+        console.log('File content:', fileText); // Log the file content
         const parser = new DxfParser();
         const dxf = parser.parseSync(fileText);
+        console.log('Parsed DXF:', dxf); // Log the parsed object
+
+        if (!dxf || !dxf.entities) {
+            throw new Error('No entities found in DXF file');
+        }
 
         res.json({ entities: dxf.entities });
     } catch (err) {
-        console.error('Error parsing DXF:', err);
-        res.status(500).json({ error: 'Failed to parse DXF file' });
+        console.error('Error parsing DXF:', err.message); // Log specific error
+        res.status(500).json({ error: 'Failed to parse DXF file', details: err.message });
     }
-});
-
-app.get('/', (req, res) => {
-    res.send('Hello, World!');
 });
 
 const port = process.env.PORT || 3000;
