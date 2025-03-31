@@ -1,8 +1,12 @@
 const express = require('express');
 const fs = require('fs');
 const DxfParser = require('dxf-parser');
+const cors = require('cors');
 
 const app = express();
+app.use(cors({
+    origin: '*'
+}));
 
 app.get('/api/dxf-entities', (req, res) => {
     const filePath = 'Result.dxf'; // Adjust to 'Result.dxf' if that’s your file
