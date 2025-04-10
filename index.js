@@ -11,6 +11,10 @@ app.use(express.json());
 
 app.use('/api/dxf', dxfRouter)
 
+app.get('/echo', (req, res) => {
+    res.json("hii");
+});
+
 
 
 const port = process.env.PORT || 3000;
