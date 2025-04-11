@@ -70,9 +70,9 @@ const getDxfEntitiesFromFile = (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
-  console.log('hit')
 
   try {
+    const { layerName } = req.body;
     const fileText = req.file.buffer.toString('utf-8');
     const parser = new DxfParser();
     const dxfResult = parser.parseSync(fileText);
@@ -81,12 +81,19 @@ const getDxfEntitiesFromFile = (req, res) => {
       throw new Error('No entities found in uploaded DXF file');
     }
 
-    res.json({ entities: dxfResult.entities });
+    let filteredEntities = dxfResult.entities;
+
+    if (layerName) {
+      filteredEntities = filteredEntities.filter(entity => entity.layer === layerName);
+    }
+
+    res.json({ entities: filteredEntities });
   } catch (err) {
     console.error('Error parsing uploaded DXF:', err.message);
     res.status(500).json({ error: 'Failed to parse uploaded DXF file', details: err.message });
   }
 };
+
 
 const generateDxfFromJson = (req, res) => {
   const { basePlot, wall, baseplate, column, foundation, mullionColumn, groundBeam } = req.body;
@@ -136,7 +143,6 @@ const generateDxfFromJson = (req, res) => {
     // Draw BasePlates
     baseplate.basePlates.forEach(plate => {
       if (Array.isArray(plate.points) && plate.points.length >= 2) {
-        console.log(plate.points)
         createPolylineFromPoints(plate.points || [], 'BasePlates');
       }
     });
@@ -186,12 +192,37 @@ const generateDxfFromJson = (req, res) => {
         if (plate.points && plate.points.length >= 2) {
           try {
             createLinearDimension(dxf, plate.points[0], plate.points[1], 5);
+            // createLinearDimension(dxf, plate.points[1], plate.points[2], 5);
           } catch (e) {
             console.error('Error creating dimension:', e.message);
           }
         }
       });
     }
+    // if(column && column.columns.length > 0) {
+    //   column.columns.forEach((col) => {
+    //     if (col.points && col.points.length >= 2) {
+    //       try {
+    //         createLinearDimension(dxf, col.points[0], col.points[1], 5);
+    //         createLinearDimension(dxf, col.points[1], col.points[2], 5);
+    //       } catch (e) {
+    //         console.error('Error creating dimension:', e.message);
+    //       }
+    //     }
+    //   });
+    // }
+    // if(foundation && foundation.foundations.length > 0) {
+    //   foundation.foundations.forEach((f) => {
+    //     if (f.points && f.points.length >= 2) {
+    //       try {
+    //         createLinearDimension(dxf, f.points[0], f.points[1], 5);
+    //         createLinearDimension(dxf, f.points[1], f.points[2], 5);
+    //       } catch (e) {
+    //         console.error('Error creating dimension:', e.message);
+    //       }
+    //     }
+    //   });
+    // }
 
     // Generate DXF string
     // console.log(dxf.stringify)
