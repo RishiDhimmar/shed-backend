@@ -1,9 +1,7 @@
-
-
-import { Colors, DxfWriter, LWPolylineFlags } from '@tarikjabiri/dxf';
-import { point3d } from '@tarikjabiri/dxf';
-import DxfParser from 'dxf-parser';
-import fs from 'fs';
+const { Colors, DxfWriter, LWPolylineFlags } = require('@tarikjabiri/dxf');
+const { point3d } = require('@tarikjabiri/dxf');
+const DxfParser = require('dxf-parser');
+const fs = require('fs');
 
 /**
  * Creates a linear dimension entity
@@ -49,7 +47,7 @@ function createLinearDimension(dxf, start, end, offset = 100, layer = "Dimension
   }
 }
 
-export const getDxfEntitiesSampleFile = (req, res) => {
+const getDxfEntitiesSampleFile = (req, res) => {
   const filePath = 'Result.dxf';
 
   try {
@@ -68,7 +66,7 @@ export const getDxfEntitiesSampleFile = (req, res) => {
   }
 };
 
-export const getDxfEntitiesFromFile = (req, res) => {
+const getDxfEntitiesFromFile = (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
@@ -90,7 +88,7 @@ export const getDxfEntitiesFromFile = (req, res) => {
   }
 };
 
-export const generateDxfFromJson = (req, res) => {
+const generateDxfFromJson = (req, res) => {
   const { basePlot, wall, baseplate, column, foundation, mullionColumn, groundBeam } = req.body;
 
   if (!Array.isArray(baseplate.basePlates)) {
@@ -209,7 +207,7 @@ export const generateDxfFromJson = (req, res) => {
   }
 };
 
-export const getSampleDxfFromJson = (req, res) => {
+const getSampleDxfFromJson = (req, res) => {
   const { baseplate } = req.body;
 
   if (!baseplate || !Array.isArray(baseplate.basePlates)) {
@@ -239,8 +237,10 @@ export const getSampleDxfFromJson = (req, res) => {
   }
 };
 
-export const temp = (req, res) => {
+const temp = (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="shed.dxf"');
   res.setHeader('Content-Type', 'application/dxf');
   res.send(req.body);
 };
+
+module.exports = { getDxfEntitiesSampleFile, getDxfEntitiesFromFile, generateDxfFromJson, getSampleDxfFromJson, temp };

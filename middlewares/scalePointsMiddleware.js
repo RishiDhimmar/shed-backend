@@ -1,4 +1,4 @@
-function scalePointsMiddleware(req, res, next) {
+const scalePointsMiddleware = (req, res, next) => {
     const scalePoints = (points) =>
         Array.isArray(points)
             ? points.map((point) => ([point[0] * 1000, point[1] * 1000]))
@@ -40,7 +40,7 @@ function scalePointsMiddleware(req, res, next) {
         }
         if (groundBeam) scaleEntity(groundBeam, 'points');
 
-        
+
         next();
     } catch (err) {
         console.error('Error scaling points:', err.message);
@@ -48,4 +48,4 @@ function scalePointsMiddleware(req, res, next) {
     }
 }
 
-module.exports = scalePointsMiddleware;
+module.exports = { scalePointsMiddleware }
