@@ -84,7 +84,8 @@ const getDxfEntitiesFromFile = (req, res) => {
     let filteredEntities = dxfResult.entities;
 
     if (layerName) {
-      filteredEntities = filteredEntities.filter(entity => entity.layer === layerName);
+      filteredEntities = filteredEntities.filter(entity => entity.layer.toLowerCase() === layerName.toLowerCase());
+      // filteredEntities = filteredEntities.filter(entity => entity.layer === layerName);
     }
 
     res.json({ entities: filteredEntities });
