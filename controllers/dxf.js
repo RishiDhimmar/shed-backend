@@ -47,6 +47,96 @@ function createLinearDimension(dxf, start, end, offset = 100, layer = "Dimension
   }
 }
 
+/**
+* Creates a table in the DXF document
+* 
+* @param {Object} dxf - DXF writer instance
+* @param {Number} x - x position of the table top-left corner
+* @param {Number} y - y position of the table top-left corner
+* @param {Number} width - total width of the table
+* @param {Number} rowHeight - height of each row
+* @param {Array} colWidths - array of column widths
+* @param {Array} data - 2D array of table content
+* @param {String} layer - layer name for the table
+*/
+function createTable(dxf, x, y, rowHeight, colWidths, data, layer = "Table") {
+  try {
+    dxf.setCurrentLayerName(layer);
+
+    const rows = data.length;
+    const cols = colWidths.length;
+
+    // Calculate total width and height of the table
+    // Slight adjustment factor to nudge text to the left (tweak if needed)
+    const centerOffsetCorrection = 10;
+
+    // Adjust column widths: add padding per column
+    const adjustedColWidths = colWidths.map(width => width + 20); // Add 20 units buffer
+    const totalWidth = adjustedColWidths.reduce((sum, width) => sum + width, 0);
+
+    const totalHeight = rows * rowHeight;
+
+    // Draw outer rectangle
+    dxf.addLine(point3d(x, y), point3d(x + totalWidth, y), { layer });
+    dxf.addLine(point3d(x + totalWidth, y), point3d(x + totalWidth, y - totalHeight), { layer });
+    dxf.addLine(point3d(x + totalWidth, y - totalHeight), point3d(x, y - totalHeight), { layer });
+    dxf.addLine(point3d(x, y - totalHeight), point3d(x, y), { layer });
+
+
+    // Draw horizontal lines (row separators)
+    for (let i = 1; i < rows; i++) {
+      const yPos = y - i * rowHeight;
+      dxf.addLine(point3d(x, yPos), point3d(x + totalWidth, yPos), { layer });
+    }
+
+
+    // Draw vertical lines (column separators)
+    let xPos = x;
+    for (let i = 1; i < cols; i++) {
+      xPos += colWidths[i - 1];
+      dxf.addLine(point3d(xPos, y), point3d(xPos, y - totalHeight), { layer });
+    }
+
+
+
+    // Add text content
+    let startY = y;
+
+    // For each row
+    for (let row = 0; row < rows; row++) {
+      let startX = x;
+
+      // For each column in the row
+      for (let col = 0; col < cols; col++) {
+        const cellText = data[row][col] || '';
+        const cellWidth = adjustedColWidths[col];
+
+        // Put text at a fixed offset from the top-left of the cell
+        const textX = startX + (cellWidth / 4) - centerOffsetCorrection;
+        const textY = startY - (row * rowHeight) - (rowHeight / 2);
+
+        // Add text
+        dxf.addText(
+          point3d(textX, textY),
+          rowHeight * 0.25, // Text height 25% of row height
+          cellText,
+          {
+            layer,
+            align: 'CENTER',
+            valign: 'MIDDLE'
+          }
+        );
+
+        startX += cellWidth;
+      }
+    }
+  } catch (e) {
+    console.error('Error creating table:', e.message);
+  }
+}
+
+
+
 const getDxfEntitiesSampleFile = (req, res) => {
   const filePath = 'Result.dxf';
 
@@ -116,6 +206,7 @@ const generateDxfFromJson = (req, res) => {
     dxf.addLayer('GroundBeam', Colors.Cyan, 'CONTINUOUS');
     dxf.addLayer('Foundation', Colors.Magenta, 'CONTINUOUS');
     dxf.addLayer('Dimensions', Colors.White, 'Dashed');
+    dxf.addLayer('Table', Colors.White, 'CONTINUOUS'); // Add new layer for table
 
     const createPolylineFromPoints = (points, layer) => {
       try {
@@ -134,6 +225,17 @@ const generateDxfFromJson = (req, res) => {
 
     // Draw Base Plot
     createPolylineFromPoints(basePlot.points || [], 'BasePlot');
+
+    let maxX = 0;
+    let minY = 0;
+
+    if (Array.isArray(basePlot.points) && basePlot.points.length > 0) {
+      basePlot.points.forEach(point => {
+        const [x, y] = point;
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+      })
+    }
 
     // Draw External Wall
     createPolylineFromPoints(wall.externalWallPoints || [], 'ExternalWall');
@@ -200,6 +302,28 @@ const generateDxfFromJson = (req, res) => {
         }
       });
     }
+
+
+    // Table layout
+    const rowHeight = 500;
+    const colWidths = [2000, 1500, 1500, 1500];
+    const spacing = 1000;
+
+    let tableX = maxX !== -Infinity ? maxX + spacing : 0;
+    let tableY = minY !== Infinity ? minY - spacing : 0;
+
+    // Static table data - header row and data rows
+    const tableData = [
+      ['Component', 'Width', 'Height', 'Material'],
+      ['Baseplate', '500mm', '500mm', 'Steel'],
+      ['Column', '300mm', '3000mm', 'Steel'],
+      ['Foundation', '800mm', '500mm', 'Concrete'],
+      ['Ground Beam', '400mm', '300mm', 'Concrete']
+    ];
+
+    // Create the table
+    createTable(dxf, tableX, tableY, rowHeight, colWidths, tableData, 'Table');
+
     // if(column && column.columns.length > 0) {
     //   column.columns.forEach((col) => {
     //     if (col.points && col.points.length >= 2) {
@@ -276,3 +400,5 @@ const temp = (req, res) => {
 };
 
 module.exports = { getDxfEntitiesSampleFile, getDxfEntitiesFromFile, generateDxfFromJson, getSampleDxfFromJson, temp };
+
+
