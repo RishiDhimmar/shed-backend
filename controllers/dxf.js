@@ -187,8 +187,9 @@ const getDxfEntitiesFromFile = (req, res) => {
 
 
 const generateDxfFromJson = (req, res) => {
-  const { basePlot, wall, baseplate, column, foundation, mullionColumn, groundBeam } = req.body;
 
+  const { basePlot, wall, baseplate, column, foundation, mullionColumn, groundBeam } = req.body;
+  console.log("foundtion is : ", foundation)
   if (!Array.isArray(baseplate.basePlates)) {
     return res.status(400).json({ error: 'Invalid basePlates data' });
   }
@@ -250,11 +251,47 @@ const generateDxfFromJson = (req, res) => {
       }
     });
 
-    // Draw Columns
+    // Draw Columns with labels
     if (column && Array.isArray(column.columns)) {
       column.columns.forEach(col => {
         if (Array.isArray(col.points) && col.points.length >= 2) {
           createPolylineFromPoints(col.points || [], 'Columns');
+
+          // Set current layer for text
+          dxf.setCurrentLayerName('Columns');
+
+          if (col.labelPosition && col.labelPosition.length >= 2) {
+            const [x, y, z = 0] = col.labelPosition;
+
+            // Create text at the correct position with consistent scaling
+            dxf.addText(
+              point3d(x * 1000, y * 1000, z * 1000), // Scale all coordinates by 1000
+              250, // Text height appropriate for the scale
+              col.label || 'No Label',
+              {
+                layer: 'Columns',
+                rotation: col.labelRotation || 0,
+                color: Colors.White
+              }
+            );
+          } else if (col.points.length > 0) {
+            // Fallback: Calculate centroid if labelPosition is missing
+            const centroid = col.points.reduce(
+              (acc, [px, py]) => [acc[0] + px, acc[1] + py],
+              [0, 0]
+            ).map(c => c / col.points.length);
+
+            dxf.addText(
+              point3d(centroid[0] * 1000, centroid[1] * 1000, 0),
+              250, // Text height
+              col.label || 'No Label',
+              {
+                layer: 'Columns',
+                rotation: col.labelRotation || 0,
+                color: Colors.White
+              }
+            );
+          }
         }
       });
     }
@@ -303,22 +340,95 @@ const generateDxfFromJson = (req, res) => {
       });
     }
 
+    // DYNAMIC TABLE DATA GENERATION
+    // Organize columns by type
+    let cornerColumns = [];
+    let horizontalColumns = [];
+    let verticalColumns = [];
+
+    if (column && Array.isArray(column.columns)) {
+      column.columns.forEach(col => {
+        if (col.type === 'corner') {
+          cornerColumns.push(col);
+        } else if (col.type === 'horizontal') {
+          horizontalColumns.push(col);
+        } else if (col.type === 'vertical') {
+          verticalColumns.push(col);
+        }
+      });
+    }
+
+    // Updated getColumnDimensions to use width and length directly
+    const getColumnDimensions = (columns) => {
+      if (!columns || columns.length === 0) {
+        return "N/A";
+      }
+
+      const col = columns[0];
+      try {
+        // Use the width and length properties from the column object
+        const width = ((col.width).toFixed(2)) * 1000;
+        const length = (col.length.toFixed(2)) * 1000;
+        return `${width} * ${length}`;
+      } catch (e) {
+        console.error('Error retrieving column dimensions:', e);
+        return "N/A";
+      }
+    };
+
+    // Get foundation dimensions
+    const getFoundationDimensions = (foundationValues, type) => {
+      if (!foundationValues || !foundationValues[type]) {
+        return { rcc: "N/A", pcc: "N/A" };
+      }
+      const data = foundationValues[type];
+      try {
+        const rcc = `${data.RccBf.toFixed(2)} * ${data.rccLf.toFixed(2)}`; // Keep in original units, 2 decimals
+        const pcc = `${data.pccWidth.toFixed(2)} * ${data.pccLength.toFixed(2)}`;
+        console.log(`Foundation ${type}: RCC = ${rcc}, PCC = ${pcc}`);
+        return { rcc, pcc };
+      } catch (e) {
+        console.error(`Error retrieving foundation dimensions for ${type}:`, e);
+        return { rcc: "N/A", pcc: "N/A" };
+      }
+    };
 
     // Table layout
-    const rowHeight = 500;
-    const colWidths = [2000, 1500, 1500, 1500];
+    const rowHeight = 700;
+    const colWidths = [5500, 3000, 3000, 3000];
     const spacing = 1000;
 
     let tableX = maxX !== -Infinity ? maxX + spacing : 0;
     let tableY = minY !== Infinity ? minY - spacing : 0;
 
+    const cornerDimensions = getColumnDimensions(cornerColumns);
+    const horizontalDimensions = getColumnDimensions(horizontalColumns);
+    const verticalDimensions = getColumnDimensions(verticalColumns);
+    console.log("colmnsa are: ", cornerDimensions, horizontalDimensions, verticalDimensions)
+
+
+    // Get foundation dimensions
+    const cornerFoundation = getFoundationDimensions(foundation?.values, 'corner');
+    const verticalFoundation = getFoundationDimensions(foundation?.values, 'vertical');
+    const horizontalFoundation = getFoundationDimensions(foundation?.values, 'horizontal');
+
     // Static table data - header row and data rows
     const tableData = [
-      ['Component', 'Width', 'Height', 'Material'],
-      ['Baseplate', '500mm', '500mm', 'Steel'],
-      ['Column', '300mm', '3000mm', 'Steel'],
-      ['Foundation', '800mm', '500mm', 'Concrete'],
-      ['Ground Beam', '400mm', '300mm', 'Concrete']
+      ['Component', 'C1', 'C2', 'C3'],
+      ['SIZE(bc*dc)', cornerDimensions, horizontalDimensions, verticalDimensions],
+      ['CONC.MIX', "M−25", "M−25", "M−25"],
+      ['MAIN REINF', "8−16#+16−12#", "4−16#+12−12#", "4−16#+14−12#"],
+      ['CONF.HEIGHT', "600", "600", "600"],
+      ["IN REST", "4−RING\n4−LINK", "2−RING\n2−LINK", "2−RING\n3−LINK"],
+      ["IN (ℓc)"],
+      ["R.C.C SIZE (Bf x Lf)", cornerFoundation.rcc, verticalFoundation.rcc, horizontalFoundation.rcc],
+      ["P.C.C. SIZE", cornerFoundation.pcc, verticalFoundation.pcc, horizontalFoundation.pcc],
+      ["D", foundation?.values?.corner?.depthD.toFixed(2) || "N/A", foundation?.values?.vertical?.depthD.toFixed(2) || "N/A", foundation?.values?.horizontal?.depthD.toFixed(2) || "N/A"],
+      ["d", foundation?.values?.corner?.depthd.toFixed(2) || "N/A", foundation?.values?.vertical?.depthd.toFixed(2) || "N/A", foundation?.values?.horizontal?.depthd.toFixed(2) || "N/A"],
+      ["SHORT BAR", `${foundation?.values?.corner?.shortBarCount}#,${foundation?.values?.corner?.shortBarSpacing} C/C`, `${foundation?.values?.vertical?.shortBarCount}#,${foundation?.values?.vertical?.shortBarSpacing} C/C`, `${foundation?.values?.horizontal?.shortBarCount}#,${foundation?.values?.horizontal?.shortBarSpacing} C/C`],
+      ["LONG BAR", `${foundation?.values?.corner?.longBarCount}#,${foundation?.values?.corner?.longBarSpacing} C/C`, `${foundation?.values?.vertical?.longBarCount}#,${foundation?.values?.vertical?.longBarSpacing} C/C`, `${foundation?.values?.horizontal?.longBarCount}#,${foundation?.values?.horizontal?.longBarSpacing} C/C`],
+      ["CONC. MIX", "M−25", "M−25", "M−25"],
+
     ];
 
     // Create the table
