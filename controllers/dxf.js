@@ -706,10 +706,10 @@ const getDxfformPolygons = (req, res) => {
     // BasePlot
 
     if (Array.isArray(wall.externalWallPoints) && Array.isArray(wall.internalWallPoints)) {
-      const externalVertices = wall.externalWallPoints.map(p => ({ point: { x: p[0], y: p[1] }, }));
+      const externalVertices = wall.externalWallPoints.map(p => ({ point: { x: p[0] * 1000, y: p[1] * 1000 }, }));
       dxf.addLWPolyline(externalVertices, { flags: 1 });
 
-      const internalVertices = wall.internalWallPoints.map(p => ({ point: { x: p[0], y: p[1] }, }));
+      const internalVertices = wall.internalWallPoints.map(p => ({ point: { x: p[0] * 1000, y: p[1] * 1000 }, }));
       dxf.addLWPolyline(internalVertices, { flags: 1 });
     }
 
@@ -722,7 +722,7 @@ const getDxfformPolygons = (req, res) => {
       dxf.setCurrentLayerName('BasePlates');
       baseplate.polygons.map(polygon => {
         const verts2d = polygon.map(p => ({
-          point: { x: p.x, y: p.y },      // <-- wrap here
+          point: { x: p.x * 1000, y: p.y * 1000 },      // <-- wrap here
           // you can also add startingWidth, endWidth or bulge if you need
         }));
         dxf.addLWPolyline(verts2d, { flags: 1 });
@@ -736,7 +736,7 @@ const getDxfformPolygons = (req, res) => {
       dxf.setCurrentLayerName('Columns');
       column.polygons.map(polygon => {
         const verts2d = polygon.map(p => ({
-          point: { x: p.x, y: p.y },      // <-- wrap here
+          point: { x: p.x * 1000, y: p.y * 1000 },      // <-- wrap here
           // you can also add startingWidth, endWidth or bulge if you need
         }));
         dxf.addLWPolyline(verts2d, { flags: 1 });
@@ -747,7 +747,7 @@ const getDxfformPolygons = (req, res) => {
       dxf.setCurrentLayerName('Foundation');
       foundation.innerPolygons.map(polygon => {
         const verts2d = polygon.map(p => ({
-          point: { x: p.x, y: p.y },      // <-- wrap here
+          point: { x: p.x * 1000, y: p.y * 1000 },      // <-- wrap here
           // you can also add startingWidth, endWidth or bulge if you need
         }));
         console.log(verts2d);
@@ -759,7 +759,7 @@ const getDxfformPolygons = (req, res) => {
       dxf.setCurrentLayerName('Foundation');
       foundation.outerPolygons.map(polygon => {
         const verts2d = polygon.map(p => ({
-          point: { x: p.x, y: p.y },      // <-- wrap here
+          point: { x: p.x * 1000, y: p.y * 1000 },      // <-- wrap here
           // you can also add startingWidth, endWidth or bulge if you need
         }));
         dxf.addLWPolyline(verts2d, { flags: 1 });
