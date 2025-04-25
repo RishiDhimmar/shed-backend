@@ -374,7 +374,7 @@ const getDxfEntitiesFromFile = (req, res) => {
       entities: filteredEntities,
       blocks: dxfResult.blocks || {},
     });
-    
+
   } catch (err) {
     console.error('Error parsing uploaded DXF:', err.message);
     res.status(500).json({ error: 'Failed to parse uploaded DXF file', details: err.message });
@@ -679,10 +679,111 @@ const getSampleDxfFromJson = (req, res) => {
   }
 };
 
+const getDxfformPolygons = (req, res) => {
+  const {
+    basePlot = {},
+    wall = {},
+    baseplate = { basePlates: [] },
+    column = { columns: [] },
+    foundation = { foundations: [] },
+    mullionColumn = { mullionPositions: [] },
+    groundBeam = { points: [] },
+  } = req.body;
+
+  try {
+    const dxf = new DxfWriter();
+    dxf.addLayer('BasePlot', Colors.White, 'CONTINUOUS');
+    dxf.addLayer('ExternalWall', Colors.Yellow, 'CONTINUOUS');
+    dxf.addLayer('InternalWall', Colors.Yellow, 'CONTINUOUS');
+    dxf.addLayer('BasePlates', Colors.Green, 'CONTINUOUS');
+    dxf.addLayer('Columns', Colors.Blue, 'CONTINUOUS');
+    dxf.addLayer('MullionColumn', Colors.Red, 'CONTINUOUS');
+    dxf.addLayer('GroundBeam', Colors.Cyan, 'CONTINUOUS');
+    dxf.addLayer('Foundation', Colors.Magenta, 'CONTINUOUS');
+    dxf.addLayer('Dimensions', Colors.White, 'Dashed');
+    dxf.addLayer('Centerline', Colors.Green, 'DASHED');
+
+    // BasePlot
+
+    if (Array.isArray(wall.externalWallPoints) && Array.isArray(wall.internalWallPoints)) {
+      const externalVertices = wall.externalWallPoints.map(p => ({ point: { x: p[0], y: p[1] }, }));
+      dxf.addLWPolyline(externalVertices, { flags: 1 });
+
+      const internalVertices = wall.internalWallPoints.map(p => ({ point: { x: p[0], y: p[1] }, }));
+      dxf.addLWPolyline(internalVertices, { flags: 1 });
+    }
+
+    // BasePlate
+    if (
+      Array.isArray(baseplate.polygons)
+
+    ) {
+      // map into LWPolylineVertex[]
+      dxf.setCurrentLayerName('BasePlates');
+      baseplate.polygons.map(polygon => {
+        const verts2d = polygon.map(p => ({
+          point: { x: p.x, y: p.y },      // <-- wrap here
+          // you can also add startingWidth, endWidth or bulge if you need
+        }));
+        dxf.addLWPolyline(verts2d, { flags: 1 });
+
+      })
+
+      // console.log(verts2d);
+    }
+
+    if (Array.isArray(column.polygons)) {
+      dxf.setCurrentLayerName('Columns');
+      column.polygons.map(polygon => {
+        const verts2d = polygon.map(p => ({
+          point: { x: p.x, y: p.y },      // <-- wrap here
+          // you can also add startingWidth, endWidth or bulge if you need
+        }));
+        dxf.addLWPolyline(verts2d, { flags: 1 });
+      })
+    }
+
+    if (Array.isArray(foundation.innerPolygons)) {
+      dxf.setCurrentLayerName('Foundation');
+      foundation.innerPolygons.map(polygon => {
+        const verts2d = polygon.map(p => ({
+          point: { x: p.x, y: p.y },      // <-- wrap here
+          // you can also add startingWidth, endWidth or bulge if you need
+        }));
+        console.log(verts2d);
+        dxf.addLWPolyline(verts2d, { flags: 1 });
+      })
+    }
+
+    if (Array.isArray(foundation.outerPolygons)) {
+      dxf.setCurrentLayerName('Foundation');
+      foundation.outerPolygons.map(polygon => {
+        const verts2d = polygon.map(p => ({
+          point: { x: p.x, y: p.y },      // <-- wrap here
+          // you can also add startingWidth, endWidth or bulge if you need
+        }));
+        dxf.addLWPolyline(verts2d, { flags: 1 });
+      })
+    }
+
+
+
+
+    const dxfString = dxf.stringify();
+    res.setHeader('Content-Disposition', 'attachment; filename="shed.dxf"');
+    res.setHeader('Content-Type', 'application/dxf');
+    res.send(dxfString);
+  } catch (error) {
+    console.error('DXF generation error:', error);
+    res.status(500).json({ error: 'Failed to generate DXF', details: error.message || 'Unknown error' });
+
+  }
+}
+
 const temp = (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="shed.dxf"');
   res.setHeader('Content-Type', 'application/dxf');
   res.send(req.body);
 };
 
-module.exports = { getDxfEntitiesSampleFile, getDxfEntitiesFromFile, generateDxfFromJson, getSampleDxfFromJson, temp };
+module.exports = { getDxfEntitiesSampleFile, getDxfEntitiesFromFile, generateDxfFromJson, getSampleDxfFromJson, temp, getDxfformPolygons };

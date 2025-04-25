@@ -5,7 +5,7 @@ const scalePointsMiddleware = (req, res, next) => {
             : [];
 
     const scaleEntity = (entity, key) => {
-        console.log(entity[key])
+        // console.log(entity[key])
         if (entity && Array.isArray(entity[key])) {
             entity[key] = scalePoints(entity[key]);
         }
