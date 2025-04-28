@@ -766,6 +766,19 @@ const getDxfformPolygons = (req, res) => {
       })
     }
 
+    //mullion columns 
+    if (Array.isArray(mullionColumn.polygons)) {
+      dxf.setCurrentLayerName('MullionColumn');
+      mullionColumn.polygons.map(polygon => {
+        const verts2d = polygon.map(p => ({
+          point: { x: p.x * 1000, y: p.y * 1000 },      // <-- wrap here
+          // you can also add startingWidth, endWidth or bulge if you need
+        }));
+        dxf.addLWPolyline(verts2d, { flags: 1 });
+      })
+    }
+
+
 
 
 
