@@ -10,7 +10,7 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use('/api/dxf', dxfRouter)
 
 app.get('/test', (req, res) => {
-    res.json("working");
+    res.json("working branch");
 });
 app.post('/echo', (req, res) => {
     res.json(req.body);
