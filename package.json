@@ -21,6 +21,7 @@
   "dependencies": {
     "@tarikjabiri/dxf": "^2.8.9",
     "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
     "dxf-parser": "^1.1.2",
     "dxf-writer": "^1.18.4",
     "express": "^4.21.2",
