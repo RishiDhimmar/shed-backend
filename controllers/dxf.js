@@ -277,11 +277,12 @@
 
 // module.exports = { getDxfEntitiesSampleFile, getDxfEntitiesFromFile, generateDxfFromJson, getSampleDxfFromJson, temp };
 
-const { Colors, DxfWriter, LWPolylineFlags, TextHorizontalAlignment, TextVerticalAlignment } = require('@tarikjabiri/dxf');
+const { Colors, DxfWriter, LWPolylineFlags, TextHorizontalAlignment, TextVerticalAlignment, SolidFillFlag, HatchPolylineBoundary, HatchBoundaryPaths } = require('@tarikjabiri/dxf');
 const { point3d } = require('@tarikjabiri/dxf');
 const DxfParser = require('dxf-parser');
 const fs = require('fs');
-const { convertFlatPointsToVertices, initializeLayers, filterEveryThird } = require('../utils/dxfUtils');
+const { convertFlatPointsToVertices, initializeLayers, filterEveryThird, partitionGroupsByDimension } = require('../utils/dxfUtils');
+const enableDimensions = false;
 
 /**
  * Creates a linear dimension entity
@@ -381,149 +382,6 @@ const getDxfEntitiesFromFile = (req, res) => {
     res.status(500).json({ error: 'Failed to parse uploaded DXF file', details: err.message });
   }
 };
-
-// const generateDxfFromJson = (req, res) => {
-//   const { basePlot, wall, baseplate, column, foundation, mullionColumn, groundBeam } = req.body;
-
-//   if (!Array.isArray(baseplate.basePlates)) {
-//     return res.status(400).json({ error: 'Invalid basePlates data' });
-//   }
-
-//   try {
-//     const dxf = new DxfWriter();
-
-//     //define layers
-//     dxf.addLayer('BasePlot', Colors.White, 'CONTINUOUS');
-//     dxf.addLayer('ExternalWall', Colors.Yellow, 'CONTINUOUS');
-//     dxf.addLayer('InternalWall', Colors.Yellow, 'CONTINUOUS');
-//     dxf.addLayer('BasePlates', Colors.Green, 'CONTINUOUS');
-//     dxf.addLayer('Columns', Colors.Blue, 'CONTINUOUS');
-//     dxf.addLayer('MullionColumn', Colors.Red, 'CONTINUOUS');
-//     dxf.addLayer('GroundBeam', Colors.Cyan, 'CONTINUOUS');
-//     dxf.addLayer('Foundation', Colors.Magenta, 'CONTINUOUS');
-//     dxf.addLayer('Dimensions', Colors.White, 'Dashed');
-
-//     const createPolylineFromPoints = (points, layer) => {
-//       try {
-//         if (!Array.isArray(points) || points.length < 2) return;
-
-//         const vertices = points.map(([x, y]) => ({
-//           point: point3d(x, y),
-//         }));
-
-//         dxf.setCurrentLayerName(layer);
-//         dxf.addLWPolyline(vertices, { flags: LWPolylineFlags.Closed }); // Assuming addLwPolyline exists and accepts vertices and options
-//       } catch (e) {
-//         console.error(`Error creating polyline on layer ${layer}:`, e.message);
-//       }
-//     };
-
-//     // Draw Base Plot
-//     createPolylineFromPoints(basePlot.points || [], 'BasePlot');
-
-//     // Draw External Wall
-//     createPolylineFromPoints(wall.externalWallPoints || [], 'ExternalWall');
-
-//     // Draw Internal Wall
-//     createPolylineFromPoints(wall.internalWallPoints || [], 'InternalWall');
-
-//     // Draw BasePlates
-//     baseplate.basePlates.forEach(plate => {
-//       if (Array.isArray(plate.points) && plate.points.length >= 2) {
-//         createPolylineFromPoints(plate.points || [], 'BasePlates');
-//       }
-//     });
-
-//     // Draw Columns
-//     if (column && Array.isArray(column.columns)) {
-//       column.columns.forEach(col => {
-//         if (Array.isArray(col.points) && col.points.length >= 2) {
-//           createPolylineFromPoints(col.points || [], 'Columns');
-//         }
-//       });
-//     }
-
-//     // Draw Foundations
-//     if (foundation && Array.isArray(foundation.foundations)) {
-//       foundation.foundations.forEach(f => {
-//         if (Array.isArray(f.points) && f.points.length >= 2) {
-//           createPolylineFromPoints(f.points || [], 'Foundation');
-//         }
-//       });
-//     }
-
-//     // Draw Mullion Columns
-//     if (mullionColumn && Array.isArray(mullionColumn.mullionPositions)) {
-//       mullionColumn.mullionPositions.forEach(points => {
-//         if (Array.isArray(points) && points.length >= 2) {
-//           createPolylineFromPoints(points || [], 'MullionColumn');
-//         }
-//       });
-//     }
-
-//     // Draw Ground Beam
-//     if (groundBeam && Array.isArray(groundBeam.points)) {
-//       createPolylineFromPoints(groundBeam.points || [], 'GroundBeam');
-//     }
-
-//     // Debug test label at origin
-//     // try {
-//     //   dxf.addText('TEST LABEL', point3d(500, 0), { height: 1 }); // Assuming addText exists and accepts position and options
-//     // } catch (e) {
-//     //   console.error('Error creating test label:', e.message);
-//     // }
-
-//     // Example dimension for baseplates
-//     if (baseplate.basePlates.length > 0) {
-//       baseplate.basePlates.forEach((plate) => {
-//         if (plate.points && plate.points.length >= 2) {
-//           try {
-//             createLinearDimension(dxf, plate.points[0], plate.points[1], 5);
-//             // createLinearDimension(dxf, plate.points[1], plate.points[2], 5);
-//           } catch (e) {
-//             console.error('Error creating dimension:', e.message);
-//           }
-//         }
-//       });
-//     }
-//     // if(column && column.columns.length > 0) {
-//     //   column.columns.forEach((col) => {
-//     //     if (col.points && col.points.length >= 2) {
-//     //       try {
-//     //         createLinearDimension(dxf, col.points[0], col.points[1], 5);
-//     //         createLinearDimension(dxf, col.points[1], col.points[2], 5);
-//     //       } catch (e) {
-//     //         console.error('Error creating dimension:', e.message);
-//     //       }
-//     //     }
-//     //   });
-//     // }
-//     // if(foundation && foundation.foundations.length > 0) {
-//     //   foundation.foundations.forEach((f) => {
-//     //     if (f.points && f.points.length >= 2) {
-//     //       try {
-//     //         createLinearDimension(dxf, f.points[0], f.points[1], 5);
-//     //         createLinearDimension(dxf, f.points[1], f.points[2], 5);
-//     //       } catch (e) {
-//     //         console.error('Error creating dimension:', e.message);
-//     //       }
-//     //     }
-//     //   });
-//     // }
-
-//     // Generate DXF string
-//     // console.log(dxf.stringify)
-//     const dxfString = dxf.stringify();
-
-
-//     res.setHeader('Content-Disposition', 'attachment; filename="shed.dxf"');
-//     res.setHeader('Content-Type', 'application/dxf');
-//     res.send(dxfString);
-//   } catch (error) {
-//     console.error('DXF generation error:', error);
-//     res.status(500).json({ error: 'Failed to generate DXF', details: error.message || 'Unknown error' });
-//   }
-// };
 
 const generateDxfFromJson = (req, res) => {
   const {
@@ -680,15 +538,243 @@ const getSampleDxfFromJson = (req, res) => {
   }
 };
 
+// Helper functions to reduce code duplication
+function addPolyline(dxf, points, layerName) {
+  dxf.setCurrentLayerName(layerName);
+  const vertices = points.map(point => ({ point: point3d(point.x, -point.y) }));
+  dxf.addLWPolyline(vertices, { flags: 1 });
+}
+
+function addLine(dxf, start, end, layerName) {
+  dxf.setCurrentLayerName(layerName);
+  dxf.addLine(point3d(start.x, -start.y), point3d(end.x, -end.y));
+}
+
+function addCircle(dxf, center, radius, layerName) {
+  dxf.setCurrentLayerName(layerName);
+  dxf.addCircle(point3d(center.x, -center.y), radius);
+}
+
+// New function to add dimension lines for a polygon
+function addDimensionLines(dxf, points, layerName, offset = 500) {
+
+  if (!points || points.length < 2 || !enableDimensions) return;
+
+  dxf.setCurrentLayerName('Dimensions');
+
+  // For each edge in the polygon
+  for (let i = 1; i < 3; i++) {
+    const start = points[i];
+    const end = points[(i + 1) % points.length];
+
+    // Skip if the points are the same
+    if (start.x === end.x && start.y === end.y) continue;
+
+    // Calculate direction vector of the edge
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    // Calculate perpendicular direction for offset
+    const perpX = -dy / length;
+    const perpY = dx / length;
+
+    // Offset points
+    const startOffset = {
+      x: start.x + perpX * offset,
+      y: start.y + perpY * offset
+    };
+
+    const endOffset = {
+      x: end.x + perpX * offset,
+      y: end.y + perpY * offset
+    };
+
+    // Draw dimension line
+    addLine(dxf, startOffset, endOffset, layerName + '_Dimension');
+
+    // Draw extension lines
+    addLine(dxf, start, startOffset, layerName + '_Dimension');
+    addLine(dxf, end, endOffset, layerName + '_Dimension');
+
+    // Add dimension text (length of the edge)
+    const midpoint = {
+      x: (startOffset.x + endOffset.x) / 2,
+      y: (startOffset.y + endOffset.y) / 2
+    };
+
+    const dimensionText = Math.round(length).toString();
+    dxf.setCurrentLayerName('Dimensions');
+    dxf.addText(point3d(midpoint.x, -midpoint.y), 100, dimensionText);
+  }
+  dxf.setCurrentLayerName(layerName);
+}
+
+// Modular functions for each data type
+function addDxfData(dxf, dxfData) {
+  if (!dxfData.data) return;
+  dxf.setCurrentLayerName('DxfData');
+  // Add polygons
+  if (Array.isArray(dxfData.data.polygons)) {
+    dxfData.data.polygons.forEach(points => {
+      if (Array.isArray(points) && points.length >= 2) {
+        addPolyline(dxf, points, 'DxfData');
+      }
+    });
+  }
+  // Add lines
+  if (Array.isArray(dxfData.data.lines)) {
+    dxfData.data.lines.forEach(line => {
+      if (line.start && line.end) {
+        addLine(dxf, line.start, line.end, 'DxfData');
+      }
+    });
+  }
+  // Add curves (circles)
+  if (Array.isArray(dxfData.data.curves)) {
+    dxfData.data.curves.forEach(curve => {
+      if (curve.type === 'CIRCLE' && curve.center && typeof curve.radius === 'number') {
+        addCircle(dxf, curve.center, curve.radius, 'DxfData');
+        // Add dimension lines for circle (diameter)
+      }
+    });
+    // Text addition remains commented out due to potential issues
+    // if (Array.isArray(dxfData.data.texts)) {
+    //   dxfData.data.texts.forEach(text => {
+    //     if (text.text && typeof text.text === 'string' && text.text.trim()) {
+    //       addText(dxf, text, 'DxfData');
+    //     }
+    //   });
+    // }
+  }
+}
+
+function addExternalWall(dxf, wall) {
+  dxf.setCurrentLayerName('ExternalWall');
+  if (Array.isArray(wall.externalWallPoints) && Array.isArray(wall.internalWallPoints)) {
+    const externalVertices = convertFlatPointsToVertices(wall.externalWallPoints);
+    addDimensionLines(dxf, wall.externalWallPoints.map(p => ({ x: p.x, y: p.y })), 'ExternalWall', 700);
+    dxf.addLWPolyline(externalVertices, { flags: 1 });
+    // Add dimension lines for external wall
+
+    const filteredInnerPoints = filterEveryThird(wall.internalWallPoints);
+    const internalVertices = convertFlatPointsToVertices(filteredInnerPoints);
+
+    addDimensionLines(dxf, filteredInnerPoints.map(p => ({ x: p.x, y: p.y })), 'ExternalWall', 900);
+    dxf.addLWPolyline(internalVertices, { flags: 1 });
+    // Add dimension lines for internal wall
+  }
+}
+
+function addBasePlates(dxf, baseplate) {
+  dxf.setCurrentLayerName('BasePlates');
+  if (Array.isArray(baseplate.basePlates)) {
+    baseplate.basePlates.forEach(plate => {
+      if (Array.isArray(plate.points) && plate.points.length >= 2) {
+        addDimensionLines(dxf, plate.points, 'BasePlates', 900);
+        addPolyline(dxf, plate.points, 'BasePlates');
+        // Add dimension lines for baseplate
+      }
+      dxf.addText(point3d(plate.points[0].x - 100, -plate.points[0].y), 200, plate.label);
+    });
+  }
+}
+
+function addColumns(dxf, column) {
+  dxf.setCurrentLayerName('Columns');
+  partitionGroupsByDimension(column.polygons).map((group, index) => group.map(p => { console.log(p.label + " " + index) }));
+
+  if (Array.isArray(column.columns)) {
+    column.columns.forEach(col => {
+      if (Array.isArray(col.points) && col.points.length >= 2) {
+        let transformedPoints = col.points.map(point => ({ x: point.x, y: -point.y }));
+        // Ensure polyline is closed
+        if (transformedPoints.length > 0) {
+          const first = transformedPoints[0];
+          const last = transformedPoints[transformedPoints.length - 1];
+          if (!(first.x === last.x && first.y === last.y)) {
+            transformedPoints.push({ x: first.x, y: first.y });
+          }
+        }
+        const polylineVertices = transformedPoints.map(point => ({ point: point3d(point.x, point.y) }));
+        addDimensionLines(dxf, col.points, 'Columns', 1000);
+        dxf.addLWPolyline(polylineVertices, { flags: 1 });
+        // Add dimension lines for columns
+        dxf.addText(point3d(col.points[0].x - 1500, -col.points[0].y), 200, col.label);
+      }
+    });
+  }
+}
+
+function addFoundations(dxf, foundation) {
+  dxf.setCurrentLayerName('Foundation');
+  if (Array.isArray(foundation.foundations)) {
+    foundation.foundations.forEach(plate => {
+      if (Array.isArray(plate.innerFoundationPoints) && plate.innerFoundationPoints.length >= 2) {
+        addDimensionLines(dxf, plate.innerFoundationPoints, 'Foundation', 1500);
+        addPolyline(dxf, plate.innerFoundationPoints, 'Foundation');
+        // Add dimension lines for inner foundation
+      }
+      if (Array.isArray(plate.outerFoundationPoints) && plate.outerFoundationPoints.length >= 2) {
+        addDimensionLines(dxf, plate.outerFoundationPoints, 'Foundation', 1600);
+        addPolyline(dxf, plate.outerFoundationPoints, 'Foundation');
+        // Add dimension lines for outer foundation
+      }
+      if (Array.isArray(plate.ppcPoints) && plate.ppcPoints.length >= 2) {
+        addDimensionLines(dxf, plate.ppcPoints, 'Foundation', 1700);
+        addPolyline(dxf, plate.ppcPoints, 'Foundation');
+        // Add dimension lines for ppc points
+      }
+      // Add lines between inner and outer foundations
+      if (
+        Array.isArray(plate.innerFoundationPoints) &&
+        Array.isArray(plate.outerFoundationPoints) &&
+        plate.innerFoundationPoints.length >= 4 &&
+        plate.outerFoundationPoints.length >= 4
+      ) {
+        [0, 1, 2, 3].forEach(i => {
+          addLine(dxf, plate.innerFoundationPoints[i], plate.outerFoundationPoints[i], 'Foundation');
+        });
+      }
+
+      dxf.addText(point3d(plate.innerFoundationPoints[0].x - 1000, -plate.innerFoundationPoints[0].y), 200, plate.label);
+    });
+  }
+}
+
+function addMullionColumns(dxf, mullionColumn) {
+  dxf.setCurrentLayerName('MullionColumn');
+  if (Array.isArray(mullionColumn.polygons)) {
+    mullionColumn.polygons.forEach(plate => {
+      if (Array.isArray(plate.points) && plate.points.length >= 2) {
+        addDimensionLines(dxf, plate.points, 'MullionColumn', 350);
+        addPolyline(dxf, plate.points, 'MullionColumn');
+        // Add dimension lines for mullion columns
+      }
+    });
+  }
+}
+
+// Function to create dimension layers
+function createDimensionLayers(dxf, Colors) {
+  // Create dimension layers for each main layer
+  dxf.addLayer('DxfData_Dimension', Colors.BLUE, 'CONTINUOUS');
+  dxf.addLayer('ExternalWall_Dimension', Colors.RED, 'CONTINUOUS');
+  dxf.addLayer('BasePlates_Dimension', Colors.GREEN, 'CONTINUOUS');
+  dxf.addLayer('Columns_Dimension', Colors.MAGENTA, 'CONTINUOUS');
+  dxf.addLayer('Foundation_Dimension', Colors.CYAN, 'CONTINUOUS');
+  dxf.addLayer('MullionColumn_Dimension', Colors.YELLOW, 'CONTINUOUS');
+}
+
+
+// Main function
 const getDxfformPolygons = (req, res) => {
   const {
-    basePlot = {},
     wall = {},
     baseplate = { basePlates: [] },
     column = { columns: [] },
     foundation = { foundations: [] },
     mullionColumn = { mullionPositions: [] },
-    groundBeam = { points: [] },
     dxfData = {},
   } = req.body;
 
@@ -696,139 +782,12 @@ const getDxfformPolygons = (req, res) => {
     const dxf = new DxfWriter();
     initializeLayers(dxf, Colors);
 
-    dxf.setCurrentLayerName('DxfData');
-    if (dxfData.data) {
-      dxfData.data.polygons.forEach(points => {
-        if (Array.isArray(points) && points.length >= 2) {
-          const vertices = points.map(point => ({ point: point3d(point.x, -point.y) }));
-          dxf.addLWPolyline(vertices, { flags: 1 }); // Assuming addLwPolyline exists and accepts vertices
-        }
-      })
-      dxfData.data.lines.forEach(line => {
-        dxf.addLine(point3d(line.start.x, -line.start.y), point3d(line.end.x, -line.end.y), { flags: 1 }); // Assuming addLwPolyline exists and accepts vertices
-      })
-      dxfData.data.curves.forEach(curve => {
-        if (curve.type === 'CIRCLE') {
-          dxf.addCircle(point3d(curve.center.x, -curve.center.y), curve.radius); // Assuming addLwPolyline exists and accepts vertices
-        }
-      })
-      // dxfData.data.texts.forEach((text, index) => {
-      //   // Log the full text object for debugging
-      //   console.log(`Text ${index}:`, text);
-
-      //   // Safely extract position values
-      //   const posX = typeof text.position?.x === 'number' && !isNaN(text.position.x) ? text.position.x : 0;
-      //   const posY = typeof text.position?.y === 'number' && !isNaN(text.position.y) ? text.position.y : 0;
-
-      //   // Skip invalid text objects
-      //   if (!text.text || typeof text.text !== 'string' || text.text.trim() === '') {
-      //     console.warn(`Skipping text ${index}: Invalid or empty text content`, text);
-      //     return;
-      //   }
-
-      //   // Warn about large coordinates
-      //   if (Math.abs(posX) > 1e6 || Math.abs(posY) > 1e6) {
-      //     console.warn(`Text ${index}: Large coordinates may be outside viewport`, { posX, posY });
-      //   }
-
-      //   try {
-      //     dxf.addText(
-      //       point3d(posX/100000, -posY/10000),
-      //       text.height || 1,
-      //       text.text,
-      //       {
-      //         rotation: text.rotation || 0,
-      //         horizontalAlignment: TextHorizontalAlignment.Center,
-      //         verticalAlignment: TextVerticalAlignment.Middle,
-      //       }
-      //     );
-      //     console.log(`Added text ${index} at:`, { posX, posY, text: text.text });
-      //   } catch (error) {
-      //     console.error(`Error adding text ${index}:`, { text, error });
-      //   }
-      // });
-    }
-
-
-    dxf.setCurrentLayerName('ExternalWall');
-
-    if (Array.isArray(wall.externalWallPoints) && Array.isArray(wall.internalWallPoints)) {
-      const externalVertices = convertFlatPointsToVertices(wall.externalWallPoints);
-      dxf.addLWPolyline(externalVertices, { flags: 1 });
-
-      const filteredInnerPoints = filterEveryThird(wall.internalWallPoints);
-      const internalVertices = convertFlatPointsToVertices(filteredInnerPoints);
-      dxf.addLWPolyline(internalVertices, { flags: 1 });
-    }
-
-    dxf.setCurrentLayerName('BasePlates');
-
-    if (Array.isArray(baseplate.basePlates)) {
-      baseplate.basePlates.forEach(plate => {
-        if (Array.isArray(plate.points) && plate.points.length >= 2) {
-          const vertices = plate.points.map(point => ({ point: point3d(point.x, -point.y) }));
-          dxf.addLWPolyline(vertices, { flags: 1 }); // Assuming addLwPolyline exists and accepts vertices
-        }
-      });
-    }
-
-    dxf.setCurrentLayerName('Columns');
-    if (Array.isArray(column.columns)) {
-      column.columns.forEach(col => {
-        if (Array.isArray(col.points) && col.points.length >= 2) {
-          const vertices = col.points.map(point => ({ point: point3d(point.x, -point.y) }));
-          dxf.addLWPolyline(vertices, { flags: 1 }); // Assuming addLwPolyline exists and accepts vertices
-        }
-      });
-    }
-
-    dxf.setCurrentLayerName('Foundation');
-    if (Array.isArray(foundation.foundations)) {
-      foundation.foundations.forEach(plate => {
-        if (Array.isArray(plate.innerFoundationPoints) && plate.innerFoundationPoints.length >= 2) {
-          const vertices = plate.innerFoundationPoints.map(point => ({ point: point3d(point.x, -point.y) }));
-          dxf.addLWPolyline(vertices, { flags: 1 }); // Assuming addLwPolyline exists and accepts vertices
-        }
-        if (Array.isArray(plate.outerFoundationPoints) && plate.outerFoundationPoints.length >= 2) {
-          const vertices = plate.outerFoundationPoints.map(point => ({ point: point3d(point.x, -point.y) }));
-          dxf.addLWPolyline(vertices, { flags: 1 }); // Assuming addLwPolyline exists and accepts vertices
-        }
-        if (Array.isArray(plate.ppcPoints) && plate.ppcPoints.length >= 2) {
-          const vertices = plate.ppcPoints.map(point => ({ point: point3d(point.x, -point.y) }));
-          dxf.addLWPolyline(vertices, { flags: 1 }); // Assuming addLwPolyline exists and accepts vertices
-        }
-
-        // Add lines between inner and outer foundation
-        if (
-          Array.isArray(plate.innerFoundationPoints) &&
-          Array.isArray(plate.outerFoundationPoints) &&
-          plate.innerFoundationPoints.length >= 4 &&
-          plate.outerFoundationPoints.length >= 4
-        ) {
-          [0, 1, 2, 3].forEach(i => {
-            const start = point3d(plate.innerFoundationPoints[i].x, -plate.innerFoundationPoints[i].y);
-            const end = point3d(plate.outerFoundationPoints[i].x, -plate.outerFoundationPoints[i].y);
-            dxf.addLine(start, end);
-          });
-        }
-
-
-      });
-
-    }
-    dxf.setCurrentLayerName('MullionColumn');
-    if (Array.isArray(mullionColumn.polygons) && mullionColumn.polygons.length >= 2) {
-      mullionColumn.polygons.forEach(plate => {
-        if (Array.isArray(plate.points) && plate.points.length >= 2) {
-          const vertices = plate.points.map(point => ({ point: point3d(point.x, -point.y) }));
-          dxf.addLWPolyline(vertices, { flags: 1 }); // Assuming addLwPolyline exists and accepts vertices
-        }
-      })
-    }
-
-
-
-
+    addDxfData(dxf, dxfData);
+    addExternalWall(dxf, wall);
+    addBasePlates(dxf, baseplate);
+    addColumns(dxf, column);
+    addFoundations(dxf, foundation);
+    addMullionColumns(dxf, mullionColumn);
 
     const dxfString = dxf.stringify();
     res.setHeader('Content-Disposition', 'attachment; filename="shed.dxf"');
@@ -842,7 +801,6 @@ const getDxfformPolygons = (req, res) => {
     });
   }
 };
-
 
 
 const temp = (req, res) => {
