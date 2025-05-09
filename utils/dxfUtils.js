@@ -68,7 +68,6 @@ function partitionGroupsByDimension(polygons) {
             // Create order-agnostic dimension key
             const [dim1, dim2] = [width.toFixed(0), height.toFixed(0)].sort((a, b) => a - b);
             const dimensionKey = `${dim1}_${dim2}`;
-            console.log(dimensionKey);
 
             // Group polygons by normalized dimensions
             dimensionMap[dimensionKey] = dimensionMap[dimensionKey] || [];
@@ -89,5 +88,6 @@ module.exports = {
     convertFlatPointsToVertices,
     filterEveryThird,
     initializeLayers,
-    partitionGroupsByDimension
+    partitionGroupsByDimension,
+    getBounds
 };
