@@ -934,7 +934,7 @@ function addDxfData(dxf, dxfData) {
   if (!dxfData.data) return;
   dxf.setCurrentLayerName('DxfData');
   // Add polygons
-  if (Array.isArray(dxfData.data.polygons)) {
+  if (dxfData.data.polygons && Array.isArray(dxfData.data.polygons)) {
     dxfData.data.polygons.forEach(points => {
       if (Array.isArray(points) && points.length >= 2) {
         addPolyline(dxf, points, 'DxfData');
@@ -942,7 +942,7 @@ function addDxfData(dxf, dxfData) {
     });
   }
   // Add lines
-  if (Array.isArray(dxfData.data.lines)) {
+  if (dxfData.data.lines && Array.isArray(dxfData.data.lines)) {
     dxfData.data.lines.forEach(line => {
       if (line.start && line.end) {
         addLine(dxf, line.start, line.end, 'DxfData');
@@ -950,7 +950,7 @@ function addDxfData(dxf, dxfData) {
     });
   }
   // Add curves (circles)
-  if (Array.isArray(dxfData.data.curves)) {
+  if (dxfData.data.curves && Array.isArray(dxfData.data.curves)) {
     dxfData.data.curves.forEach(curve => {
       if (curve.type === 'CIRCLE' && curve.center && typeof curve.radius === 'number') {
         addCircle(dxf, curve.center, curve.radius, 'DxfData');
@@ -1073,6 +1073,120 @@ function addMullionColumns(dxf, mullionColumn) {
   }
 }
 
+function addColumnTable(dxf, column) {
+  const rowHeight = 700;
+  const colWidths = [5500, 3000, 3000, 3000];
+  const spacing = 1000;
+  const processedColumnGroups = partitionGroupsByDimension(column.polygons, "column");
+
+
+  const tableData = [];
+  // Column labels: ['C1', 'C2', 'C3', ...]
+  const temp = processedColumnGroups.map((group, index) => 'C' + (index + 1));
+
+  // Column widths
+  const colWidthsTemp = [5000].concat(new Array(temp.length).fill(5000));
+
+  // Other fixed rows
+  const concMixTemp = ['CONC. MIX'].concat(new Array(temp.length).fill('M−25'));
+  const mainReinfTemp = ['MAIN REINF'].concat(new Array(temp.length).fill('8−16#+16−12#'));
+  const confHeightTemp = ['CONF.HEIGHT'].concat(new Array(temp.length).fill('600'));
+  const inRestTemp = ["IN REST"].concat(new Array(temp.length).fill("8#,150"));
+  const inTemp = ["IN (ℓc)"].concat(new Array(temp.length).fill("8#,150"));
+
+  // Log each group for debugging
+  processedColumnGroups.forEach((group, index) => {
+    console.log(`Group ${index + 1} (${group.name})`, group.columns);
+  });
+
+  // Get Bc × Dc dimensions
+  const tempBcXDc = processedColumnGroups.map((group) => {
+    if (group.columns.length === 0) return '';
+    const { xMin, xMax, yMin, yMax } = getBounds(group.columns[0].points || []);
+    const bc = Math.abs(xMin - xMax);
+    const dc = Math.abs(yMin - yMax);
+    return bc.toFixed(0) + " X " + dc.toFixed(0);
+  });
+
+  // Get column labels per group
+  const groupColLables = processedColumnGroups.map((group) => {
+    return group.columns.map(column => column.label).join(', ');
+  });
+
+
+  tableData.push(['Columns'].concat(temp))
+  tableData.push(['BC X DC'].concat(tempBcXDc))
+  tableData.push(['Label'].concat(groupColLables))
+  tableData.push(concMixTemp);
+  tableData.push(mainReinfTemp);
+  tableData.push(confHeightTemp);
+  tableData.push(inRestTemp);
+  tableData.push(inTemp);
+
+
+  // Create the table
+  createTable(dxf, 0, 0, rowHeight, colWidthsTemp, tableData, 'Table');
+}
+function addFoundationTable(dxf, foundation) {
+  const rowHeight = 700;
+  const colWidths = [5500, 3000, 3000, 3000];
+  const spacing = 1000;
+  const processedFoundationGroups = partitionGroupsByDimension(foundation.groups, "Foundation");
+
+
+  const tableData = [];
+  // Column labels: ['C1', 'C2', 'C3', ...]
+  const temp = processedFoundationGroups.map((group, index) => 'F' + (index + 1));
+
+  // Column widths
+  const colWidthsTemp = [5000].concat(new Array(temp.length).fill(5000));
+
+  // Other fixed rows
+  const concMixTemp = ['CONC. MIX'].concat(new Array(temp.length).fill('M−25'));
+  const depthTemp = ['DEPTH'].concat(new Array(temp.length).fill('600'));
+  const shortBarTemp = ['SHORT BAR'].concat(new Array(temp.length).fill('10#, 150 C/C'));
+  const longBarTemp = ['LONG BAR'].concat(new Array(temp.length).fill('10#, 150 C/C'));
+  // Log each group for debugging
+  processedFoundationGroups.forEach((group, index) => {
+    console.log(`Group ${index + 1} (${group.name})`, group.foundations);
+  });
+
+  // Get Bc × Dc dimensions
+  const tempPCC = processedFoundationGroups.map((group) => {
+    if (group.foundations.length === 0) return '';
+    const { xMin, xMax, yMin, yMax } = getBounds(group.foundations[0].outerFoundationPoints || []);
+    const bc = Math.abs(xMin - xMax);
+    const dc = Math.abs(yMin - yMax);
+    return bc.toFixed(0) + " X " + dc.toFixed(0);
+  });
+  const tempRCC = processedFoundationGroups.map((group) => {
+    if (group.foundations.length === 0) return '';
+    const { xMin, xMax, yMin, yMax } = getBounds(group.foundations[0].innerFoundationPoints || []);
+    const bc = Math.abs(xMin - xMax);
+    const dc = Math.abs(yMin - yMax);
+    return bc.toFixed(0) + " X " + dc.toFixed(0);
+  });
+
+  // Get column labels per group
+  const groupColLables = processedFoundationGroups.map((group) => {
+    return group.foundations.map(column => column.label).join(', ');
+  });
+
+
+  tableData.push(['FOUNDATIONS'].concat(temp))
+  tableData.push(['P. C. C. SIZE'].concat(tempPCC))
+  tableData.push(['R. C. C. SIZE'].concat(tempRCC))
+  tableData.push(['Label'].concat(groupColLables))
+  tableData.push(depthTemp);
+  tableData.push(shortBarTemp);
+  tableData.push(longBarTemp);
+  tableData.push(concMixTemp);
+
+
+  // Create the table
+  createTable(dxf, 0, 10000, rowHeight, colWidthsTemp, tableData, 'Table');
+}
+
 
 // Main function
 const getDxfformPolygons = (req, res) => {
@@ -1086,9 +1200,7 @@ const getDxfformPolygons = (req, res) => {
   } = req.body;
 
   try {
-    const rowHeight = 700;
-    const colWidths = [5500, 3000, 3000, 3000];
-    const spacing = 1000;
+
 
     const dxf = new DxfWriter();
     initializeLayers(dxf, Colors);
@@ -1099,55 +1211,8 @@ const getDxfformPolygons = (req, res) => {
     addColumns(dxf, column);
     addFoundations(dxf, foundation);
     addMullionColumns(dxf, mullionColumn);
-
-    const processedColumnGroups = partitionGroupsByDimension(column.polygons);
-
-    // let tableData = [
-    //   ['Component', 'C1', 'C2', 'C3'],
-    //   ['CONC.MIX', "M−25", "M−25", "M−25"],
-    //   ['MAIN REINF', "8−16#+16−12#", "4−16#+12−12#", "4−16#+14−12#"],
-    //   ['CONF.HEIGHT', "600", "600", "600"],
-    //   ["IN REST", "4−RING\n4−LINK", "2−RING\n2−LINK", "2−RING\n3−LINK"],
-    //   ["IN (ℓc)"],
-    //   ["CONC. MIX", "M−25", "M−25", "M−25"],
-
-    // ];
-    const tableData = []
-    const temp = processedColumnGroups.map((group, index) => {
-      return 'C' + (index + 1);
-    })
-    const colWidthsTemp = [5000].concat(new Array(temp.length).fill(5000));
-    const concMixTemp = ['CONC. MIX'].concat(new Array(temp.length).fill('M−25'));
-    const mainReinfTemp = ['MAIN REINF'].concat(new Array(temp.length).fill('8−16#+16−12#'));
-    const confHeightTemp = ['CONF.HEIGHT'].concat(new Array(temp.length).fill('600'));
-    const inRestTemp = ["IN REST"].concat(new Array(temp.length).fill("8#,150"));
-    const inTemp = ["IN (ℓc)"].concat(new Array(temp.length).fill("8#,150"));
-
-
-    const tempBcXDc = processedColumnGroups.map((group, index) => {
-      if (group.length === 0) return '';
-      const { xMin, xMax, yMin, yMax } = getBounds(group[0]?.points || []);
-      const bc = Math.abs(xMin - xMax);
-      const dc = Math.abs(yMin - yMax);
-      return bc.toFixed(0) + " X " + dc.toFixed(0);
-    })
-
-    const groupColLables = processedColumnGroups.map((group, index) => {
-      return group.map(column => column.label + "").toString();
-    })
-
-    tableData.push(['Columns'].concat(temp))
-    tableData.push(['BC X DC'].concat(tempBcXDc))
-    tableData.push(['Label'].concat(groupColLables))
-    tableData.push(concMixTemp);
-    tableData.push(mainReinfTemp);
-    tableData.push(confHeightTemp);
-    tableData.push(inRestTemp);
-    tableData.push(inTemp);
-
-
-    // Create the table
-    createTable(dxf, 0, 0, rowHeight, colWidthsTemp, tableData, 'Table');
+    addColumnTable(dxf, column);
+    addFoundationTable(dxf, foundation);
 
     const dxfString = dxf.stringify();
     res.setHeader('Content-Disposition', 'attachment; filename="shed.dxf"');
